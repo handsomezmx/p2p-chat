@@ -34,7 +34,7 @@ class ChatApp(npyscreen.NPSAppManaged):
             self.hostname = "0.0.0.0"
 
         #Define initial variables
-        self.port = 8080 # Port the server runs on
+        self.port = 6666 # Port the server runs on
         self.nickname = "" # Empty variable to be filled with users nickname
         self.peer = "" # Peer nickname
         self.peerIP = "0" # IP of peer
