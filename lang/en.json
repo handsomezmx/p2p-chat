@@ -7,12 +7,9 @@
         "port": "/port [port] | Restart server on specified port",
         "connectback": "/connectback | Connect to the client that is connected to your server",
         "clear": "/clear | Clear the chat. Logs will not be deleted",
-        "eval": "/eval [code] | Execute python code",
-        "status": "/status | Returns the clients status",
         "log": "/log | Logs all messages of the current session to a file",
-        "help": "/help | Shows this help",
-        "flowei": "",
-        "lang": "/lang [language] | Changes language to specified two digit country code"
+        "help": "/help | Shows this help"
+        
     },
     "noInternetAccess": "It seems like you do not have internet access.",
     "failedFetchPublicIP": "Could not get public IP.",

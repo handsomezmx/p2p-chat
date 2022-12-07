@@ -8,14 +8,7 @@ class ChatForm(npyscreen.FormBaseNew):
         self.chatInput = self.add(ChatInput, name="Input", footer="Return -> Send", rely=self.y-5)
         self.chatInput.entry_widget.handlers.update({curses.ascii.CR: self.parentApp.sendMessage})
         self.chatInput.entry_widget.handlers.update({curses.ascii.NL: self.parentApp.sendMessage})
-        self.chatInput.entry_widget.handlers.update({curses.KEY_UP: self.parentApp.historyBack})
-        self.chatInput.entry_widget.handlers.update({curses.KEY_DOWN: self.parentApp.historyForward})
-        self.chatInput.entry_widget.handlers.update({curses.KEY_DOWN: self.parentApp.historyForward})
-
-        handlers = {
-            "^V": self.parentApp.pasteFromClipboard
-        }
-        self.add_handlers(handlers)
+        
         
         
         
