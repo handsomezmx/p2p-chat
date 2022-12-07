@@ -62,7 +62,7 @@ class ChatApp(npyscreen.NPSAppManaged):
             "connectback": [self.connectBack, 0],
             "clear": [self.clearChat, 0],
             "help": [self.commandHelp, 0],
-            
+            # "file": [self.]
         }
 
 
@@ -93,7 +93,7 @@ class ChatApp(npyscreen.NPSAppManaged):
     def sysMsg(self, msg):
         self.messageLog.append("[SYSTEM] "+str(msg))
         if len(self.ChatForm.chatFeed.values) > self.ChatForm.y - 10:
-                self.clearChat()
+            self.clearChat()
         if len(str(msg)) > self.ChatForm.x - 20:
             self.ChatForm.chatFeed.values.append('[SYSTEM] '+str(msg[:self.ChatForm.x-20]))
             self.ChatForm.chatFeed.values.append(str(msg[self.ChatForm.x-20:]))

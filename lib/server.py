@@ -10,12 +10,14 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
         self.host = "" # Accept all hostnames
         self.hasConnection = False # Connection status
         self.stopSocket = False # Socket interrupt status
+        self.file = ""
 
         # Information exchange commands used to communicate between peers
         self.commandDict = {
             "nick": [self.setpeerNickname, 1],
             "quit": [self.peerQuit, 0],
-            "syntaxErr": [self.chatClientVersionsOutOfSync, 0]
+            "syntaxErr": [self.chatClientVersionsOutOfSync, 0],
+            
         }
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Create new socket
@@ -60,7 +62,9 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 self.chatApp.sysMsg(self.chatApp.lang['receivedEmptyMessage'])
                 self.chatApp.sysMsg(self.chatApp.lang['disconnectSockets'])
                 break
-
+            
+            if(data.decode().startwith('\b/file')):
+                self.run_file(data.decode().split(" ")[1],conn)
             if data.decode().startswith('\b/'): # If data is command for information exchange call the command handler
                 self.commandHandler(data)
                 if data.decode() == '\b/quit':
@@ -107,7 +111,64 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
             time.sleep(0.2)
             self.socket.close()
         self.socket = None
+    
+    def get_name(self, file_name):
+        k = 1
+        name1 = file_name.split('.')[0]
+        name2 = file_name.split('.')[1]
         
+        # incrementally trying out new names
+        # until we bump on the name of the file
+        # that does not exist yet
+        
+        while True:
+            new_name = "{}_copy{}.{}".format(name1, k, name2)
+            try:
+                file = open(new_name, "r")
+                file.close()
+                k += 1
+            except FileNotFoundError:
+                return new_name
+
+
+    def run_file(self, file_name, conn):
+        file_name = conn.recv(1024)
+        if file_name:
+            conn.send(file_name.encode())
+        
+        try:
+            self.file = open(file_name, "r")
+            self.file.close()
+            file_name = self.get_name(file_name) 
+                
+            # if file with recieved name doesnt exist
+            # then we may use the recieved name and 
+            # instantiate a file
+            
+        except FileNotFoundError:
+            pass
+                
+            # instantiating the file
+            
+        self.file = open(file_name, "wb")
+        
+        # recieving the file content
+        # until its fully recieved
+        
+        self.chatApp.sysMsg("Start receiving file")
+        msg = conn.recv(1024)
+        while msg:
+            self.file.write(msg)
+            msg = conn.recv(1024)
+            
+        # cleaning everyhting up after the job is done
+        # and finishing the thread
+            
+        self.file.close()
+        self.chatApp.sysMsg("Finished receiving file")
+
+
+
     # Method called if command for nickname change was received
     def setpeerNickname(self, nick):
         oldNick = self.chatApp.peer

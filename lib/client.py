@@ -1,7 +1,9 @@
 import socket
 import threading
+from pathlib import PurePath
 import sys
 import time
+import os
 
 class Client(threading.Thread): # Client object is type thread so that it can run simultaniously with the server
     def __init__(self, chatApp): # Initialize with a reference to the Chat App
@@ -46,6 +48,37 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
                 self.chatApp.sysMsg(error)
                 self.isConnected = False
                 return False
+
+    def send_file (self, file_name):
+        try:
+            file = open(file_name, "rb")
+            file_name=PurePath(file_name).name
+            self.socket.send(file_name.encode())
+            ack = self.socket.recv(1024)
+            if ack.decode == file_name:
+                msg = file.read(1024)
+                while msg:
+                    self.socket.send(msg)
+                    msg = file.read(1024)
+                self.chatApp.sysMsg("Sent file {} successfully".format(file_name))
+                file.close()
+                return True
+            return False
+        
+        except FileNotFoundError as error:
+            self.chatApp.sysMsg("File not found")
+            self.chatApp.sysMsg(error)
+            self.isConnected = False
+            return False
+
+        except socket.error as error:
+            self.chatApp.sysMsg(self.chatApp.lang['failedSentData'])
+            self.chatApp.sysMsg(error)
+            self.isConnected = False
+            return False
+
+
+
 
 
     
