@@ -62,7 +62,7 @@ class ChatApp(npyscreen.NPSAppManaged):
             "connectback": [self.connectBack, 0],
             "clear": [self.clearChat, 0],
             "help": [self.commandHelp, 0],
-            # "file": [self.]
+            "file": [self.chatClient.send_file, 1]
         }
 
 
