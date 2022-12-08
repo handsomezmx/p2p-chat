@@ -62,11 +62,11 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 self.chatApp.sysMsg(self.chatApp.lang['receivedEmptyMessage'])
                 self.chatApp.sysMsg(self.chatApp.lang['disconnectSockets'])
                 break
-            else:
-                if(data.decode().startswith('\b/file')):
+            elif(data.decode().startswith('\b/file')):
                     self.chatApp.sysMsg("get into run file function")
                     self.chatApp.sysMsg(data.decode())
                     self.run_file(data.decode().split(" ")[1],conn)
+            else: 
                 if data.decode().startswith('\b/quit'): # If data is command for information exchange call the command handler
                     self.chatApp.chatClient.isConnected = False
                     self.chatApp.restart()
