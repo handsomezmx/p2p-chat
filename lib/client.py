@@ -58,10 +58,10 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
             # self.chatApp.sysMsg("file name: " + file_name)
             # ack = self.socket.recv(1024)
             # if ack.decode == file_name:
-            msg = file.read(1024)
+            msg = file.read(1024).encode()
             while msg:
                 self.socket.send(msg)
-                msg = file.read(1024)
+                msg = file.read(1024).encode()
             self.chatApp.sysMsg("Sent file {} successfully".format(file_name))
             file.close()
             return True
