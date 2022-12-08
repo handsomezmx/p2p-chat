@@ -151,7 +151,9 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 
         #     # instantiating the file
         self.chatApp.sysMsg("Go into this function")
-        self.file = open(file_name[0], "wb")
+        print(file_name)
+        self.chatApp.sysMsg(file_name)
+        self.file = open(file_name, "wb")
         
         # recieving the file content
         # until its fully recieved
