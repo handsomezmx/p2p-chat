@@ -51,7 +51,7 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
 
     def send_file (self, file_name):
         try:
-            self.send("\b/file {0}".format(file_name))
+            self.send("\b/file {0}".format(file_name[0]))
             file_name = file_name[0]
             file = open(file_name, "rb")
             file_name=PurePath(file_name).name

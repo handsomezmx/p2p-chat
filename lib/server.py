@@ -65,6 +65,7 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
             
             if(data.decode().startswith('\b/file')):
                 self.chatApp.sysMsg("get into run file function")
+                self.chatApp.sysMsg(data.decode())
                 self.run_file(data.decode().split(" ")[1],conn)
             if data.decode().startswith('\b/'): # If data is command for information exchange call the command handler
                 self.commandHandler(data)
@@ -151,7 +152,6 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 
         #     # instantiating the file
         self.chatApp.sysMsg("Go into this function")
-        print(file_name)
         self.chatApp.sysMsg(file_name)
         self.file = open(file_name, "wb")
         
