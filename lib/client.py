@@ -63,6 +63,7 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
             while msg:
                 self.socket.send(msg)
                 msg = file.read(1024)
+                
             self.chatApp.sysMsg("Sent file {} successfully".format(file_name))
             file.close()
             return True

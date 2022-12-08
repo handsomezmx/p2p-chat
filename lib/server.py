@@ -13,12 +13,12 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
         self.file = ""
 
         # Information exchange commands used to communicate between peers
-        self.commandDict = {
-            "nick": [self.setpeerNickname, 1],
-            "quit": [self.peerQuit, 0],
-            "syntaxErr": [self.chatClientVersionsOutOfSync, 0],
+        # self.commandDict = {
+        #     "nick": [self.setpeerNickname, 1],
+        #     "quit": [self.peerQuit, 0],
+        #     "syntaxErr": [self.chatClientVersionsOutOfSync, 0],
             
-        }
+        # }
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Create new socket
         self.socket.bind((self.host, self.port)) # Bind the socket to host and port stored in the servers vars
@@ -27,22 +27,22 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
         self.chatApp.sysMsg(self.chatApp.lang['serverStarted'].format(self.port))
 
     # Method to handle information exchange commands
-    def commandHandler(self, command):
-        command = command.decode().split(" ")
-        if len(command) > 1:
-            args = command[1:]
-        command = command[0][2:]
-        if not command in self.commandDict:
-            self.chatApp.sysMsg(self.chatApp.lang['peerInvalidCommand'])
-            self.chatApp.chatClient.send("\b/syntaxErr")
-        else:
-            if self.commandDict[command][1] == 0:
-                self.commandDict[command][0]()
-            elif len(args) == self.commandDict[command][1]:
-                self.commandDict[command][0](args)
-            else:
-                self.chatApp.sysMsg(self.chatApp.lang['peerInvalidSyntax'])
-                self.chatApp.chatClient.send("\b/syntaxErr")
+    # def commandHandler(self, command):
+    #     command = command.decode().split(" ")
+    #     if len(command) > 1:
+    #         args = command[1:]
+    #     command = command[0][2:]
+    #     if not command in self.commandDict:
+    #         self.chatApp.sysMsg(self.chatApp.lang['peerInvalidCommand'])
+    #         self.chatApp.chatClient.send("\b/syntaxErr")
+    #     else:
+    #         if self.commandDict[command][1] == 0:
+    #             self.commandDict[command][0]()
+    #         elif len(args) == self.commandDict[command][1]:
+    #             self.commandDict[command][0](args)
+    #         else:
+    #             self.chatApp.sysMsg(self.chatApp.lang['peerInvalidSyntax'])
+    #             self.chatApp.chatClient.send("\b/syntaxErr")
 
     # Method called by threading on start
     def run(self):
@@ -62,19 +62,34 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 self.chatApp.sysMsg(self.chatApp.lang['receivedEmptyMessage'])
                 self.chatApp.sysMsg(self.chatApp.lang['disconnectSockets'])
                 break
-            
-            if(data.decode().startswith('\b/file')):
-                self.chatApp.sysMsg("get into run file function")
-                self.chatApp.sysMsg(data.decode())
-                self.run_file(data.decode().split(" ")[1],conn)
-            if data.decode().startswith('\b/'): # If data is command for information exchange call the command handler
-                self.commandHandler(data)
-                if data.decode() == '\b/quit':
+            else:
+                if(data.decode().startswith('\b/file')):
+                    self.chatApp.sysMsg("get into run file function")
+                    self.chatApp.sysMsg(data.decode())
+                    self.run_file(data.decode().split(" ")[1],conn)
+                if data.decode().startswith('\b/quit'): # If data is command for information exchange call the command handler
+                    self.chatApp.chatClient.isConnected = False
+                    self.chatApp.restart()
                     break
-            else: # Else display the message in chat feed and append it to chat log
+                if data.decode().startswith("peer just changed its name to"):
+                    self.chatApp.peer = data.decode().split(' ')[6]
                 self.chatApp.messageLog.append("{0} >  {1}".format(self.chatApp.peer, data.decode()))
                 self.chatApp.ChatForm.chatFeed.values.append("{0} >  {1}".format(self.chatApp.peer, data.decode()))
                 self.chatApp.ChatForm.chatFeed.display()
+
+
+            # if(data.decode().startswith('\b/file')):
+            #     self.chatApp.sysMsg("get into run file function")
+            #     self.chatApp.sysMsg(data.decode())
+            #     self.run_file(data.decode().split(" ")[1],conn)
+            # if data.decode().startswith('\b/'): # If data is command for information exchange call the command handler
+            #     self.commandHandler(data)
+            #     if data.decode() == '\b/quit':
+            #         break
+            # else: # Else display the message in chat feed and append it to chat log
+            #     self.chatApp.messageLog.append("{0} >  {1}".format(self.chatApp.peer, data.decode()))
+            #     self.chatApp.ChatForm.chatFeed.values.append("{0} >  {1}".format(self.chatApp.peer, data.decode()))
+            #     self.chatApp.ChatForm.chatFeed.display()
 
 
     def handleInit(self, init):
@@ -160,9 +175,12 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
         
         self.chatApp.sysMsg("Start receiving file")
         msg = conn.recv(1024)
-        while msg:
-            self.file.write(msg)
+        self.file.write(msg)
+        while len(msg) == 1024:
             msg = conn.recv(1024)
+            self.file.write(msg)
+            
+            
             
         # cleaning everyhting up after the job is done
         # and finishing the thread
@@ -173,18 +191,18 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
 
 
     # Method called if command for nickname change was received
-    def setpeerNickname(self, nick):
-        oldNick = self.chatApp.peer
-        self.chatApp.peer = nick[0]
-        self.chatApp.sysMsg(self.chatApp.lang['peerChangedName'].format(oldNick, nick[0]))
+    # def setpeerNickname(self, nick):
+    #     oldNick = self.chatApp.peer
+    #     self.chatApp.peer = nick[0]
+    #     self.chatApp.sysMsg(self.chatApp.lang['peerChangedName'].format(oldNick, nick[0]))
 
-    # Method called if connected peer quit
-    def peerQuit(self):
-        self.chatApp.sysMsg(self.chatApp.lang['peerDisconnected'].format(self.chatApp.peer))
-        self.chatApp.chatClient.isConnected = False
-        self.chatApp.restart()
+    # # Method called if connected peer quit
+    # def peerQuit(self):
+    #     self.chatApp.sysMsg(self.chatApp.lang['peerDisconnected'].format(self.chatApp.peer))
+    #     self.chatApp.chatClient.isConnected = False
+    #     self.chatApp.restart()
 
-    # Method called if connected peer uses an invalid information exchange command syntax
-    def chatClientVersionsOutOfSync(self):
-        self.chatApp.sysMsg(self.chatApp.lang['versionOutOfSync'])
+    # # Method called if connected peer uses an invalid information exchange command syntax
+    # def chatClientVersionsOutOfSync(self):
+    #     self.chatApp.sysMsg(self.chatApp.lang['versionOutOfSync'])
         

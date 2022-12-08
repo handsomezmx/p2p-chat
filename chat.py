@@ -87,7 +87,7 @@ class ChatApp(npyscreen.NPSAppManaged):
         self.nickname = args[0]
         self.sysMsg("{0}".format(self.lang['setNickname'].format(args[0])))
         if self.chatClient.isConnected:
-            self.chatClient.send("\b/nick {0}".format(args[0]))
+            self.chatClient.send("peer just changed its name to {0}".format(args[0]))
 
     # Method to render system info on chat feed
     def sysMsg(self, msg):
