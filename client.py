@@ -1,9 +1,7 @@
 import socket
 import threading
 from pathlib import PurePath
-import sys
-import time
-import os
+
 
 class Client(threading.Thread): # Client object is type thread so that it can run simultaniously with the server
     def __init__(self, chatApp): # Initialize with a reference to the Chat App
@@ -18,18 +16,18 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
 
     def conn(self, args):
         if self.chatApp.nickname == "": # Check if a nickname is set and return False if not
-            self.chatApp.sysMsg(self.chatApp.lang['nickNotSet'])
+            self.chatApp.sysMsg("You should set your nickname first")
             return False
         host = args[0] # IP of peer
         port = int(args[1]) # Port of peer
-        self.chatApp.sysMsg(self.chatApp.lang['connectingToPeer'].format(host, port))
+        self.chatApp.sysMsg("Connecting to {0} on port {1}".format(host, port))
         try: # Try to connect and catch error on fail
             self.socket.connect((host, port))
         except socket.error:
-            self.chatApp.sysMsg(self.chatApp.lang['failedConnectingTimeout'])
+            self.chatApp.sysMsg("Connection failed timed out")
             return False
         self.socket.send("\b/init {0} {1} {2}".format(self.chatApp.nickname, self.chatApp.hostname, self.chatApp.port).encode()) # Exchange initial information (nickname, ip, port)
-        self.chatApp.sysMsg(self.chatApp.lang['connected'])
+        self.chatApp.sysMsg("successfully connected")
         self.isConnected = True # Set connection status to true
     
     # Method called by Chat App to reset client socket
@@ -44,24 +42,17 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
                 self.socket.send(msg.encode())
                 return True
             except socket.error as error:
-                self.chatApp.sysMsg(self.chatApp.lang['failedSentData'])
+                self.chatApp.sysMsg("Sending failed")
                 self.chatApp.sysMsg(error)
                 self.isConnected = False
                 return False
 
     def send_file (self, file_name):
-        try:
-            
+        try:           
             self.send("\b/file {0}".format(file_name[0]))
             file_name = file_name[0]
-            file  = open(file_name, "rb")
-            
-            
+            file  = open(file_name, "rb")            
             file_name=PurePath(file_name).name
-            # self.socket.send(file_name.encode())
-            # self.chatApp.sysMsg("file name: " + file_name)
-            # ack = self.socket.recv(1024)
-            # if ack.decode == file_name:
             msg = file.read(1024)
             while msg:
                 self.socket.send(msg)
@@ -81,7 +72,7 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
             return False
 
         except socket.error as error:
-            self.chatApp.sysMsg(self.chatApp.lang['failedSentData'])
+            self.chatApp.sysMsg("Sending failed")
             self.chatApp.sysMsg(error)
             self.isConnected = False
             return False
