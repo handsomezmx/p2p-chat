@@ -51,19 +51,20 @@ class Client(threading.Thread): # Client object is type thread so that it can ru
 
     def send_file (self, file_name):
         try:
+            file_name = file_name[0]
             file = open(file_name, "rb")
             file_name=PurePath(file_name).name
-            self.socket.send(file_name.encode())
-            ack = self.socket.recv(1024)
-            if ack.decode == file_name:
+            # self.socket.send(file_name.encode())
+            # self.chatApp.sysMsg("file name: " + file_name)
+            # ack = self.socket.recv(1024)
+            # if ack.decode == file_name:
+            msg = file.read(1024)
+            while msg:
+                self.socket.send(msg)
                 msg = file.read(1024)
-                while msg:
-                    self.socket.send(msg)
-                    msg = file.read(1024)
-                self.chatApp.sysMsg("Sent file {} successfully".format(file_name))
-                file.close()
-                return True
-            return False
+            self.chatApp.sysMsg("Sent file {} successfully".format(file_name))
+            file.close()
+            return True
         
         except FileNotFoundError as error:
             self.chatApp.sysMsg("File not found")

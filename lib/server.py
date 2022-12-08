@@ -63,7 +63,7 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
                 self.chatApp.sysMsg(self.chatApp.lang['disconnectSockets'])
                 break
             
-            if(data.decode().startwith('\b/file')):
+            if(data.decode().startswith('\b/file')):
                 self.run_file(data.decode().split(" ")[1],conn)
             if data.decode().startswith('\b/'): # If data is command for information exchange call the command handler
                 self.commandHandler(data)
@@ -132,23 +132,23 @@ class Server(threading.Thread): # Server object is type thread so that it can ru
 
 
     def run_file(self, file_name, conn):
-        file_name = conn.recv(1024)
-        if file_name:
-            conn.send(file_name.encode())
+        # file_name = conn.recv(1024)
+        # if file_name:
+        #     conn.send(file_name.encode())
         
-        try:
-            self.file = open(file_name, "r")
-            self.file.close()
-            file_name = self.get_name(file_name) 
+        # try:
+        #     self.file = open(file_name, "r")
+        #     self.file.close()
+        #     file_name = self.get_name(file_name) 
                 
-            # if file with recieved name doesnt exist
-            # then we may use the recieved name and 
-            # instantiate a file
+        #     # if file with recieved name doesnt exist
+        #     # then we may use the recieved name and 
+        #     # instantiate a file
             
-        except FileNotFoundError:
-            pass
+        # except FileNotFoundError:
+        #     pass
                 
-            # instantiating the file
+        #     # instantiating the file
             
         self.file = open(file_name, "wb")
         
