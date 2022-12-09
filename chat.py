@@ -85,7 +85,7 @@ class P2P(npyscreen.NPSAppManaged):
             "file": [self.client_thread.send_file, 1]
         }
 
-    # Method to print a list of all commands
+    # Function to display all command hints
     def command_display(self):
         if len(self.P2P_display.p2pTalks.values) + len(self.command_set) + 1 > self.P2P_display.y - 10:
             self.clear_all()
@@ -93,7 +93,7 @@ class P2P(npyscreen.NPSAppManaged):
         for item in all_commands_hints:            
             self.system_message(all_commands_hints[item])
 
-    # Method to reset server and client sockets
+    # Function for /restart and /port
     def restart(self, args=None):
         self.system_message("Restarting")
         if not args == None and args[0] != self.port:
@@ -109,14 +109,14 @@ class P2P(npyscreen.NPSAppManaged):
         self.server_thread.daemon = True
         self.server_thread.start()
 
-    # Method to set user_name of client | user_name will be sent to peer for identification
+    # Function for /user_name
     def setuser_name(self, args):
         self.user_name = args[0]
         self.system_message("Set name to {0}".format(args[0]))
         if self.client_thread.has_connected:
             self.client_thread.send("peer just changed its name to {0}".format(args[0]))
 
-    # Method to render system info on chat feed
+    # Function to send formatted system message
     def system_message(self, message):
         if len(self.P2P_display.p2pTalks.values) > self.P2P_display.y - 10:
             self.clear_all()
@@ -127,7 +127,7 @@ class P2P(npyscreen.NPSAppManaged):
             self.P2P_display.p2pTalks.values.append('[SYSTEM] '+ str(message))
         self.P2P_display.p2pTalks.display()
 
-    # Method to send a message to a connected peer
+    # Function for the message to display in the npyscreen
     def sendMessage(self, _input):
         message = self.P2P_display.chatInput.value
         if message == "":
@@ -146,7 +146,7 @@ class P2P(npyscreen.NPSAppManaged):
             else:
                 self.system_message("You are not connected to a peer")
 
-    # Method to connect to a peer that connected to the server
+    # Function for /connectback
     def connectBack(self):
         if self.server_thread.hasConnection and not self.client_thread.has_connected:
             if self.peerIP == "unknown" or self.peerPort == "unknown":
@@ -157,12 +157,12 @@ class P2P(npyscreen.NPSAppManaged):
             self.system_message("Already connected to a peer")
 
    
-    #Method to clear the chat feed
+    # Function for /clear
     def clear_all(self):
         self.P2P_display.p2pTalks.values = []
         self.P2P_display.p2pTalks.display()
 
-    # Method to exit the app | Exit command will be sent to a connected peer so that they can disconnect their sockets
+    # Function for /quit
     def exitApp(self):
         self.system_message("Exiting...")
         if self.client_thread.has_connected:
@@ -171,7 +171,7 @@ class P2P(npyscreen.NPSAppManaged):
         self.server_thread.stop()
         exit(1)
 
-    # Method to handle commands
+    # Function to handle all the command by directing the command to the right function
     def commandHandler(self, message):
         message = message.split(' ')
         command = message[0][1:]
@@ -189,5 +189,5 @@ class P2P(npyscreen.NPSAppManaged):
 
 
 if __name__ == '__main__':
-    p2p = P2P().run() # Start the app if chat.py is executed
+    p2p = P2P().run()
     

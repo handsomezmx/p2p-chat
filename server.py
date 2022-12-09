@@ -17,32 +17,34 @@ class Server(threading.Thread):
         self.socket.listen() # Set socket mode to listen
         self.p2p.system_message("Server is activated on port {0}".format(self.port))
 
-    # Method called by threading on start
+    # Function to start the server thread
     def run(self):
         conn, addr = self.socket.accept()
         if self.stopSocket:
             exit(1)
         init = conn.recv(1024)
-        self.hasConnection = True
-        
-        self.handleInit(init)
-        
+        self.hasConnection = True        
+        self.handleInit(init)        
         while True:
             if len(self.p2p.P2P_display.p2pTalks.values) > self.p2p.P2P_display.y - 10:
                 self.p2p.clear_all()
             data = conn.recv(1024)
+            # If there is no data, should throw system hint error message
             if not data:
                 self.p2p.system_message("This is an empty ")
                 self.p2p.system_message("There is something wrong, disconnecting...")
                 break
+            # If starts with /file, need to go to run_file function
             elif data.decode().startswith('\b/file'):
                 self.p2p.system_message("get into run file function")
                 self.p2p.system_message(data.decode())
                 self.run_file(data.decode().split(" ")[1],conn)
+            # If starts with /quit, need to restart the p2p chat
             elif data.decode().startswith('\b/quit'):
                 self.p2p.client_thread.has_connected = False
                 self.p2p.restart()
                 break
+            # Otherwise, to display the sent message
             else: 
                 if data.decode().startswith("peer just changed its name to"):
                     self.p2p.peerName = data.decode().split(' ')[6]
@@ -57,19 +59,21 @@ class Server(threading.Thread):
             self.p2p.peerName = "Unknown"
             self.p2p.peerPort = "unknown"
             self.p2p.peerIP = 'unknown'
-        else: # Decode initial information and set peer vars to values send by peer
+        # If not empty, set user_name, port_number, and Ip address of the peer
+        else:
             init = init.decode()
             if init.startswith("\b/init"):
                 init = init[2:].split(' ')
                 self.p2p.peerName = init[1]
                 self.p2p.peerIP = init[2]
                 self.p2p.peerPort = init[3]
-            else: # If initial information is not sent correctly 
+            # Condition for not correctly sent parameters for initial mesages
+            else:
                 self.p2p.peerName = "Unknown"
                 self.p2p.peerPort = "unknown"
                 self.p2p.peerIP = 'unknown'
-
-        if not self.p2p.client_thread.has_connected: # Send message to inform about connectBack if client socket is not connected
+        # Check if not connected
+        if not self.p2p.client_thread.has_connected:
             if self.p2p.peerIP == "unknown" or self.p2p.peerPort == "unknown":
                 self.p2p.system_message("can not connectback because of missing information of peer")
             else:
