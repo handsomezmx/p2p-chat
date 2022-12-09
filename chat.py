@@ -1,171 +1,193 @@
 import npyscreen
-import sys
 import server as server
 import client as client
-from form import ChatForm
-from form import ChatInput
 import time
 import socket
-import pyperclip
-import json
+import curses
 from io import StringIO
 
+# Required package to pip install: 'socket', 'threading', 'curses', 'npyscreen', 'time'
 
-commands = {
-    "connect": "/connect [host] [port] | Connect to a peer",
-    "disconnect": "/disconnect | Disconnect from the current chat",
-    "nickname": "/nickname [nickname] | Set your nickname",
-    "quit": "/quit | Quit the app",
-    "port": "/port [port] | Restart server on specified port",
-    "connectback": "/connectback | Connect to the client that is connected to your server",
-    "clear": "/clear | Clear the chat. Logs will not be deleted",
-    "log": "/log | Logs all messages of the current session to a file",
-    "help": "/help | Shows this help"
+class P2P_display(npyscreen.FormBaseNew):
+    def create(self):
+        self.y, self.x  = self.useable_space()
+        self.p2pTalks = self.add(npyscreen.BoxTitle, name="Feed", editable=False, max_height=self.y-7)
+        self.chatInput = self.add(ChatInput, name="Input", footer="Return -> Send", rely=self.y-5)
+        self.chatInput.entry_widget.handlers.update({curses.ascii.CR: self.parentApp.sendMessage})
+        self.chatInput.entry_widget.handlers.update({curses.ascii.NL: self.parentApp.sendMessage})
+              
+class ChatInput(npyscreen.BoxTitle):
+    _contained_widget = npyscreen.MultiLineEdit
+
+# helper function
+all_commands_hints = {
+    "connect": "/connect [host] [port] --- Connect to a peer",
+    "disconnect": "/disconnect --- Disconnect from the current peer",
+    "user_name": "/user_name [user_name] --- Set your user_name",
+    "quit": "/quit --- Quit the p2p app",
+    "port": "/port [port] --- Restart server on provided port",
+    "connectback": "/connectback --- Connect back to the client that is connected to your server",
+    "file": "/file [filename] --- Send a file to the client",
+    "clear": "/clear --- Clear all displayed chat",
+    "all": "/all --- Display all commands"
 }
 
-class ChatApp(npyscreen.NPSAppManaged):
+# Display command helper function
+def all_command_hints_display():
+    result = ""
+    for item in all_commands_hints:
+        result += all_commands_hints[item]
+    return result
+
+# Receive the hostname by self connecting to "8.8.8.8"
+def recv_hostname(conn):
+    conn.connect(("8.8.8.8", 80))
+    host_name = conn.getsockname()[0]
+    conn.close()
+    return host_name
+
+
+class P2P(npyscreen.NPSAppManaged):
     def onStart(self):
-
-        self.ChatForm = self.addForm('MAIN', ChatForm, name='Advanced p2p secure free chat app') # Add ChatForm as the main form of npyscreen
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.P2P_display = self.addForm('MAIN', P2P_display, name='Advanced p2p secure free chat app')
+        # Host information initialization
+        self_conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            s.connect(("8.8.8.8", 80))
-            self.hostname = s.getsockname()[0]
-            s.close()
+           self.hostname = recv_hostname(self_conn)
         except socket.error as error:
-            self.sysMsg("Can not connect to Internet")
-            self.sysMsg("Can not get Public IP")
+            self.system_message("Doesn't find host name and please connect to the Internet!")
             self.hostname = "0.0.0.0"
-
         self.port = 6667
-        self.nickname = ""
-        self.peer = "" 
+        self.user_name = ""
+
+        # Peer information initialization
+        self.peerName = "" 
         self.peerIP = "0" 
-        self.peerPort = "0" 
+        self.peerPort = "0"
 
-        # Start Server and Client threads
-        self.chatServer = server.Server(self)
-        self.chatServer.daemon = True
-        self.chatServer.start()
-        self.chatClient = client.Client(self)
-        self.chatClient.start()
+        # Server and client thread initialization
+        self.server_thread = server.Server(self)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+        self.client_thread = client.Client(self)
+        self.client_thread.start()
 
-        # Dictionary for commands. Includes funtion to call and number of needed arguments
-        self.commandDict = {
-            "connect": [self.chatClient.conn, 2],
+        # Initialize command sets and ensure the argument is right
+        self.command_set = {
+            "connect": [self.client_thread.conn, 2],
             "disconnect": [self.restart, 0],
-            "nickname": [self.setNickname, 1],
+            "user_name": [self.setuser_name, 1],
             "quit": [self.exitApp, 0],
             "port": [self.restart, 1],
             "connectback": [self.connectBack, 0],
-            "clear": [self.clearChat, 0],
-            "help": [self.commandHelp, 0],
-            "file": [self.chatClient.send_file, 1]
+            "clear": [self.clear_all, 0],
+            "all": [self.command_display, 0],
+            "file": [self.client_thread.send_file, 1]
         }
 
+    # Method to print a list of all commands
+    def command_display(self):
+        if len(self.P2P_display.p2pTalks.values) + len(self.command_set) + 1 > self.P2P_display.y - 10:
+            self.clear_all()
+        self.system_message("All available commands:")
+        for item in all_commands_hints:            
+            self.system_message(all_commands_hints[item])
 
     # Method to reset server and client sockets
     def restart(self, args=None):
-        self.sysMsg("Restarting")
+        self.system_message("Restarting")
         if not args == None and args[0] != self.port:
             self.port = int(args[0])
-        if self.chatClient.isConnected:
-            self.chatClient.send("\b/quit")
+        if self.client_thread.has_connected:
+            self.client_thread.send("\b/quit")
             time.sleep(0.2)
-        self.chatClient.stop()
-        self.chatServer.stop()
-        self.chatClient = client.Client(self)
-        self.chatClient.start()
-        self.chatServer = server.Server(self)
-        self.chatServer.daemon = True
-        self.chatServer.start()
+        self.client_thread.stop()
+        self.server_thread.stop()
+        self.client_thread = client.Client(self)
+        self.client_thread.start()
+        self.server_thread = server.Server(self)
+        self.server_thread.daemon = True
+        self.server_thread.start()
 
-    # Method to set nickname of client | Nickname will be sent to peer for identification
-    def setNickname(self, args):
-        self.nickname = args[0]
-        self.sysMsg("Set name to {0}".format(args[0]))
-        if self.chatClient.isConnected:
-            self.chatClient.send("peer just changed its name to {0}".format(args[0]))
+    # Method to set user_name of client | user_name will be sent to peer for identification
+    def setuser_name(self, args):
+        self.user_name = args[0]
+        self.system_message("Set name to {0}".format(args[0]))
+        if self.client_thread.has_connected:
+            self.client_thread.send("peer just changed its name to {0}".format(args[0]))
 
     # Method to render system info on chat feed
-    def sysMsg(self, msg):
-        if len(self.ChatForm.chatFeed.values) > self.ChatForm.y - 10:
-            self.clearChat()
-        if len(str(msg)) > self.ChatForm.x - 20:
-            self.ChatForm.chatFeed.values.append('[SYSTEM] '+ str(msg[:self.ChatForm.x-20]))
-            self.ChatForm.chatFeed.values.append(str(msg[self.ChatForm.x-20:]))
+    def system_message(self, message):
+        if len(self.P2P_display.p2pTalks.values) > self.P2P_display.y - 10:
+            self.clear_all()
+        if len(str(message)) > self.P2P_display.x - 20:
+            self.P2P_display.p2pTalks.values.append('[SYSTEM] '+ str(message[:self.P2P_display.x-20]))
+            self.P2P_display.p2pTalks.values.append(str(message[self.P2P_display.x-20:]))
         else:
-            self.ChatForm.chatFeed.values.append('[SYSTEM] '+ str(msg))
-        self.ChatForm.chatFeed.display()
+            self.P2P_display.p2pTalks.values.append('[SYSTEM] '+ str(message))
+        self.P2P_display.p2pTalks.display()
 
     # Method to send a message to a connected peer
     def sendMessage(self, _input):
-        msg = self.ChatForm.chatInput.value
-        if msg == "":
+        message = self.P2P_display.chatInput.value
+        if message == "":
             return False
-        if len(self.ChatForm.chatFeed.values) > self.ChatForm.y - 11:
-                self.clearChat()
-        self.ChatForm.chatInput.value = ""
-        self.ChatForm.chatInput.display()
-        if msg.startswith('/'):
-            self.commandHandler(msg)
+        if len(self.P2P_display.p2pTalks.values) > self.P2P_display.y - 11:
+                self.clear_all()
+        self.P2P_display.chatInput.value = ""
+        self.P2P_display.chatInput.display()
+        if message.startswith('/'):
+            self.commandHandler(message)
         else:
-            if self.chatClient.isConnected:
-                if self.chatClient.send(msg):
-                    self.ChatForm.chatFeed.values.append("You"+" > "+msg)
-                    self.ChatForm.chatFeed.display()
+            if self.client_thread.has_connected:
+                if self.client_thread.send(message):
+                    self.P2P_display.p2pTalks.values.append("You"+" > "+ message)
+                    self.P2P_display.p2pTalks.display()
             else:
-                self.sysMsg("You are not connected to a peer")
+                self.system_message("You are not connected to a peer")
 
     # Method to connect to a peer that connected to the server
     def connectBack(self):
-        if self.chatServer.hasConnection and not self.chatClient.isConnected:
+        if self.server_thread.hasConnection and not self.client_thread.has_connected:
             if self.peerIP == "unknown" or self.peerPort == "unknown":
-                self.sysMsg("can not connectback because of missing information of peer")
+                self.system_message("can not connectback because of missing information of peer")
                 return False
-            self.chatClient.conn([self.peerIP, int(self.peerPort)])
+            self.client_thread.conn([self.peerIP, int(self.peerPort)])
         else:
-            self.sysMsg("Already connected to a peer")
+            self.system_message("Already connected to a peer")
 
    
     #Method to clear the chat feed
-    def clearChat(self):
-        self.ChatForm.chatFeed.values = []
-        self.ChatForm.chatFeed.display()
+    def clear_all(self):
+        self.P2P_display.p2pTalks.values = []
+        self.P2P_display.p2pTalks.display()
 
     # Method to exit the app | Exit command will be sent to a connected peer so that they can disconnect their sockets
     def exitApp(self):
-        self.sysMsg("Exiting...")
-        if self.chatClient.isConnected:
-            self.chatClient.send("\b/quit")
-        self.chatClient.stop()
-        self.chatServer.stop()
+        self.system_message("Exiting...")
+        if self.client_thread.has_connected:
+            self.client_thread.send("\b/quit")
+        self.client_thread.stop()
+        self.server_thread.stop()
         exit(1)
 
     # Method to handle commands
-    def commandHandler(self, msg):
-        msg = msg.split(' ')
-        command = msg[0][1:]
-        args = msg[1:]
-        if command in self.commandDict:
-            if self.commandDict[command][1] == 0:
-                self.commandDict[command][0]()
-            elif len(args) == self.commandDict[command][1]:
-                self.commandDict[command][0](args)
+    def commandHandler(self, message):
+        message = message.split(' ')
+        command = message[0][1:]
+        args = message[1:]
+        if command in self.command_set:
+            if self.command_set[command][1] == 0:
+                self.command_set[command][0]()
+            elif len(args) == self.command_set[command][1]:
+                self.command_set[command][0](args)
             else:
-                self.sysMsg("/{0} takes {1} argument(s) but {2} was/were given.".format(command, self.commandDict[command][1], len(args)))
+                self.system_message("/{0} takes {1} argument(s) but {2} was/were given.".format(command, self.command_set[command][1], len(args)))
         else:
-            self.sysMsg("Command not found. Try /help for a list of commands!")
+            self.system_message("Command not found. Try /all for a list of commands!")
 
-    # Method to print a list of all commands
-    def commandHelp(self):
-        if len(self.ChatForm.chatFeed.values) + len(self.commandDict) + 1 > self.ChatForm.y - 10:
-            self.clearChat()
-        self.sysMsg("Here's a list of available commands:")
-        for command in commands:
-            if not commands[command] == "":
-                self.sysMsg(commands[command])
+
 
 if __name__ == '__main__':
-    chatApp = ChatApp().run() # Start the app if chat.py is executed
+    p2p = P2P().run() # Start the app if chat.py is executed
     
